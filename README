@@ -1,0 +1,19 @@
+Giskard - An anti (distributed) denial of service script.
+by Simone Margaritelli aka evilsocket
+<evilsocket@gmail.com - http://www.evilsocket.net>
+
+ENGLISH:
+
+Giskard is a simple script intended to block as much as possible denial of service attacks analyzing
+the connections statistics of your server and interacting with your preferred firewall.
+It's highly reccomended to put the script in a crontab process, let it run as frequenly as possible.
+Details about configuration are commented inside the source.
+
+ITALIANO:
+
+Giskard è un semplice script con lo scopo di bloccare per quanto sia possibile gli attacchi di tipo
+denial of service, analizzando le statistiche riguardanti le connessioni del vostro server e interagendo
+con il firewall che avete installato.
+E' altamente consigliato inserire lo script in un processo crontab, impostando il suo tempo di esecuzione
+il più frequente possibile. 
+I dettagli per la configurazione sono inseriti nei commenti all'interno del sorgente.

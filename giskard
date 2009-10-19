@@ -1,0 +1,199 @@
+#!/usr/bin/perl 
+# Copyright (C) 2009  evilsocket
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#	      FILE:  giskard 
+#
+#  DESCRIPTION:  Giskard is an anti (distributed) denial of service script.
+#
+#       AUTHOR:  evilsocket (http://www.evilsocket.net), evilsocket@gmail.com
+#      VERSION:  1.0
+#===============================================================================
+
+use strict;
+use Socket;
+use LWP::Simple;
+
+our %config = ( # server ip address to whitelist
+				'address'   => "<YOUR_SERVE_IP_ADDRESS_HERE>",
+				# consider traffic only to this port ? undef = all ports, <int> = select port
+			    'port'      => undef,
+				# whitelisted country
+				'country'   => "ITALY",
+				# tcp requests threshold
+			    'threshold' => 20,
+				# firewall command to drop a connection, %s will be replaced with the ip to drop
+				'fw_string' => "shorewall drop %s",
+				# file logging?
+				'logging'   => 1,
+				# system hostname
+				'hostname'  => trim( `hostname` ),
+				# sendmail path
+				'sendmail'  => "/usr/sbin/sendmail",
+				# email to send report to, set to undef to disable email reporting
+				'admin'     => "<YOUR_EMAIL_HERE>" );
+
+
+# parse incoming connections
+my %hits = parse_hits();
+our @ips;
+my ($ip,$requests);
+while( ($ip,$requests) = each(%hits) ){
+	# if the ip is not whitelisted and has more requests thant the threshold
+	if( $requests >= $config{'threshold'} && is_allowed($ip) == 0 ){
+		push( @ips, $ip );
+	}
+}
+
+# geo localization of leecher addresses
+my %locations = localize();
+my $count     = scalar( keys(%locations) );
+my $country;
+if( $count <= 0 ){
+	die( "@ No suspicious activities .\n" );
+	exit;
+}
+
+# drop down all the ddossers connections and send a report to the admin
+my $report   = "";
+my $datetime = "";
+while( ($ip,$country) = each(%locations) ){
+	if( $country ne $config{'country'} ){
+		$datetime = trim( `date` );
+		$report  .= "[$datetime] BLOCKING $ip FROM $country ($hits{$ip} HITS)\n";
+		fw_block_ip($ip);
+	}
+}
+
+# something to report & log ?
+if( $report ne "" ){
+	# file logging enabled ?
+	if( $config{'logging'} == 1 ){
+		open( LOG, ">>/var/log/giskard.log" );
+		print LOG $report;
+		close(LOG);
+	}
+	# email reporting enabled ?
+	if( defined( $config{'admin'} ) ){
+		send_mail( $config{'admin'}, 
+				   "giskard\@$config{hostname}",
+				   "Giskard Report",
+			   	   $report );
+	}
+}
+
+
+
+sub send_mail {
+	my ($to, $from, $subject, $message) = @_;
+	
+	open( MAIL, "|$config{sendmail} -oi -t");
+	print MAIL "From: $from\n";
+	print MAIL "To: $to\n";
+	print MAIL "Subject: $subject\n\n";
+	print MAIL "$message\n";
+	close(MAIL);
+}
+
+sub fw_block_ip {
+	my $ip  = $_[0];
+	my $cmd = sprintf( $config{'fw_string'}, $ip );
+	return `$cmd`;
+}
+
+sub localize {
+	my %locations;
+	my (@chunk, $request, $xml, $i, @values, $address, $country);
+	my $chunk_size = 25;
+
+	for( $i = 0; $i < scalar(@ips); $i += $chunk_size ) {
+		@chunk   = splice( @ips, $i, $chunk_size );
+		$request = join( ",", @chunk );
+			
+		$xml = get "http://www.ipinfodb.com/ip_query2_country.php?ip=$request&output=xml" or
+			$xml = get "http://backup.ipinfodb.com/ip_query2_country.php?ip=$request&output=xml";
+		
+		@values = ($xml =~ m/<[^>]+>([^<]+)<\/[^>]+>/gi);
+		for( $i = 0; $i < scalar(@values); $i++ ){
+			$address = trim($values[$i]);
+			$country = trim($values[$i + 3]);
+				
+			if( !defined( $locations{$address} ) && $address =~ m/^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:[.](?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/ ){
+				$locations{$address} = uc($country);
+			}
+		}	
+	}
+	
+	return %locations;
+}
+
+sub is_allowed {
+	my $ip = $_[0];
+
+	if( $ip == $config{'address'} ){
+		return 1;
+	}
+	
+	my $address = gethostbyaddr( $ip, AF_INET );
+
+	if( $address =~ m/.+\.googlebot\.com/i ){
+		return 1;
+	}
+	elsif( $address =~ m/.+\.yahoo\.com/i ){
+		return 1;
+	}
+	elsif( $address =~ m/.+\.msn\.com/i ){
+		return 1;
+	}
+	else{
+		return 0;
+	}
+}
+
+sub parse_hits {
+	my  $command;
+	my  $pipe;
+	my  %hits;
+
+	if( !defined($config{'port'}) ){
+		$pipe = `netstat -an | grep "$config{address}:" | sort`;
+	}
+	else {
+		$pipe = `netstat -an | grep "$config{address}:$config{port}" | sort`;
+	}
+
+    my @list = ($pipe =~ m/[tcpudp]+[\s]+[\d]+[\s]+[\d]+[\s]+[\d\.\:]+[\s]+([\d\.]+)\:[\d]+[\s]+.*/gi);
+	foreach my $ip (@list){
+		$ip = trim($ip);
+		if( defined( $hits{$ip} ) ){
+			$hits{$ip}++;
+		}
+		else{
+			$hits{$ip} = 1;
+		}
+	}
+	return %hits;
+}
+
+sub trim {
+	my $string = shift;
+	$string =~ s/^\s+//;
+	$string =~ s/\s+$//;
+	return $string;
+}
+
+
+
+
