@@ -30,7 +30,7 @@ our %config = ( # server ip address to whitelist
 				'address'   => "<YOUR_SERVER_IP_ADDRESS_HERE>",
 				# consider traffic only to this port ? undef = all ports, <int> = select port
 			    'port'      => undef,
-				# whitelisted countries (comma separated)
+				# whitelisted countries (comma separated) ex [ "ITALY", "UNITED STATES" ]
 				'countries' => [ "ITALY" ],
 				# tcp requests threshold
 			    'threshold' => 20,
