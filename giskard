@@ -27,7 +27,7 @@ use Socket;
 use LWP::Simple;
 
 our %config = ( # server ip address to whitelist
-				'address'   => "<YOUR_SERVE_IP_ADDRESS_HERE>",
+				'address'   => "<YOUR_SERVER_IP_ADDRESS_HERE>",
 				# consider traffic only to this port ? undef = all ports, <int> = select port
 			    'port'      => undef,
 				# whitelisted country
@@ -110,7 +110,7 @@ sub send_mail {
 sub fw_block_ip {
 	my $ip  = $_[0];
 	my $cmd = sprintf( $config{'fw_string'}, $ip );
-	return `$cmd`;
+	return system($cmd);
 }
 
 sub localize {

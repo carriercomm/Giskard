@@ -17,3 +17,5 @@ con il firewall che avete installato.
 E' altamente consigliato inserire lo script in un processo crontab, impostando il suo tempo di esecuzione
 il più frequente possibile. 
 I dettagli per la configurazione sono inseriti nei commenti all'interno del sorgente.
+
+http://www.filmwarez.net/giskardgraph.png
