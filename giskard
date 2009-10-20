@@ -19,7 +19,7 @@
 #  DESCRIPTION:  Giskard is an anti (distributed) denial of service script.
 #
 #       AUTHOR:  evilsocket (http://www.evilsocket.net), evilsocket@gmail.com
-#      VERSION:  1.0
+#      VERSION:  1.1
 #===============================================================================
 
 use strict;
@@ -30,8 +30,8 @@ our %config = ( # server ip address to whitelist
 				'address'   => "<YOUR_SERVER_IP_ADDRESS_HERE>",
 				# consider traffic only to this port ? undef = all ports, <int> = select port
 			    'port'      => undef,
-				# whitelisted country
-				'country'   => "ITALY",
+				# whitelisted countries (comma separated)
+				'countries' => [ "ITALY" ],
 				# tcp requests threshold
 			    'threshold' => 20,
 				# firewall command to drop a connection, %s will be replaced with the ip to drop
@@ -70,7 +70,7 @@ if( $count <= 0 ){
 my $report   = "";
 my $datetime = "";
 while( ($ip,$country) = each(%locations) ){
-	if( $country ne $config{'country'} ){
+	if( is_allowed_country( $country ) == 0 ){
 		$datetime = trim( `date` );
 		$report  .= "[$datetime] BLOCKING $ip FROM $country ($hits{$ip} HITS)\n";
 		fw_block_ip($ip);
@@ -111,6 +111,18 @@ sub fw_block_ip {
 	my $ip  = $_[0];
 	my $cmd = sprintf( $config{'fw_string'}, $ip );
 	return system($cmd);
+}
+
+sub is_allowed_country {
+	my $country   = $_[0];
+	my @whitelist = @{ $config{'countries'} };
+
+	foreach my $white ( @whitelist ){
+		if( $country eq $white ){
+			return 1;
+		}
+	}
+	return 0;
 }
 
 sub localize {
