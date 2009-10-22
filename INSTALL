@@ -1,0 +1,4 @@
+- Modify the '%config' inside the source code for your own server .
+- chmod a+x giskard
+- Then copy giskard anywhere you like and add its full path to a crontab job.
+- Have a cup of coffee and relax :D
