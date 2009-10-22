@@ -115,9 +115,9 @@ if( $report ne "" ){
 	$payload = "#!/bin/sh\n\n".
 			  "sleep $config{fw_rule_timeout}\n\n";
 	foreach my $ip (@blacklist){
-		$payload .= sprintf( $config{'fw_allow_string'}, $ip )."\n";
+		$payload .= sprintf( $config{'fw_allow_string'}, $ip )."  > /dev/null 2>/dev/null\n";
 	}
-	$payload .= "\nrm \$0\n";
+	$payload .= "\nrm -f \$0  > /dev/null 2>/dev/null\n";
 	open( RUNNER, ">$filename" );
 	print RUNNER $payload;
 	close(RUNNER);
