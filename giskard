@@ -19,12 +19,13 @@
 #  DESCRIPTION:  Giskard is an anti (distributed) denial of service script.
 #
 #       AUTHOR:  evilsocket (http://www.evilsocket.net), evilsocket@gmail.com
-#      VERSION:  1.1
+#      VERSION:  1.2
 #===============================================================================
 
 use strict;
 use Socket;
 use LWP::Simple;
+use POSIX 'setsid';
 
 our %config = ( # server ip address to whitelist
 				'address'   => "<YOUR_SERVER_IP_ADDRESS_HERE>",
@@ -34,8 +35,14 @@ our %config = ( # server ip address to whitelist
 				'countries' => [ "ITALY" ],
 				# tcp requests threshold
 			    'threshold' => 20,
+				# firewall command to show previously created rules
+				'fw_show_string'  => "shorewall show dynamic",
 				# firewall command to drop a connection, %s will be replaced with the ip to drop
-				'fw_string' => "shorewall drop %s",
+				'fw_drop_string'  => "shorewall drop %s",
+				# firewall command to allow a connection
+				'fw_allow_string' => "shorewall allow %s",
+				# how much time to wait to unban an ip ?
+				'fw_rule_timeout' => 3600,
 				# file logging?
 				'logging'   => 1,
 				# system hostname
@@ -46,6 +53,9 @@ our %config = ( # server ip address to whitelist
 				'admin'     => "<YOUR_EMAIL_HERE>" );
 
 
+# preload previously dropped ip
+my $fw_rules = fw_get_rules();
+
 # parse incoming connections
 my %hits = parse_hits();
 our @ips;
@@ -53,7 +63,10 @@ my ($ip,$requests);
 while( ($ip,$requests) = each(%hits) ){
 	# if the ip is not whitelisted and has more requests thant the threshold
 	if( $requests >= $config{'threshold'} && is_allowed($ip) == 0 ){
-		push( @ips, $ip );
+		# check if the ip is already blocked
+		if( $fw_rules !~ /$ip/ ){ 
+			push( @ips, $ip );
+		}
 	}
 }
 
@@ -69,11 +82,14 @@ if( $count <= 0 ){
 # drop down all the ddossers connections and send a report to the admin
 my $report   = "";
 my $datetime = "";
+my @blacklist;
 while( ($ip,$country) = each(%locations) ){
 	if( is_allowed_country( $country ) == 0 ){
 		$datetime = trim( `date` );
 		$report  .= "[$datetime] BLOCKING $ip FROM $country ($hits{$ip} HITS)\n";
 		fw_block_ip($ip);
+		
+		push( @blacklist, $ip );
 	}
 }
 
@@ -92,9 +108,35 @@ if( $report ne "" ){
 				   "Giskard Report",
 			   	   $report );
 	}
+	
+	# create temporized job
+	my $filename = "/tmp/giskard.runner.".`date +%s`;
+	my $payload;
+	$payload = "#!/bin/sh\n\n".
+			  "sleep $config{fw_rule_timeout}\n\n";
+	foreach my $ip (@blacklist){
+		$payload .= sprintf( $config{'fw_allow_string'}, $ip )."\n";
+	}
+	$payload .= "\nrm \$0\n";
+	open( RUNNER, ">$filename" );
+	print RUNNER $payload;
+	close(RUNNER);
+	system( "chmod a+x $filename" );
+	detach_process( $filename );
 }
 
+sub detach_process {
+	my $cmd = shift;
+	my $kid = fork();
 
+	if ($kid) { 
+		return;
+	}
+	else {
+		setsid();
+		system($cmd);
+	}
+}
 
 sub send_mail {
 	my ($to, $from, $subject, $message) = @_;
@@ -107,9 +149,24 @@ sub send_mail {
 	close(MAIL);
 }
 
+sub fw_get_rules {
+	my $cmd  = $config{'fw_show_string'};
+	my $data = "";
+	
+	open( RULES, "$cmd |" );
+
+	while (<RULES>){
+		$data .= $_;
+	}
+
+	close RULES;	
+	
+	return $data;
+}
+
 sub fw_block_ip {
 	my $ip  = $_[0];
-	my $cmd = sprintf( $config{'fw_string'}, $ip );
+	my $cmd = sprintf( $config{'fw_drop_string'}, $ip );
 	return system($cmd);
 }
 
