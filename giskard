@@ -63,10 +63,7 @@ my ($ip,$requests);
 while( ($ip,$requests) = each(%hits) ){
 	# if the ip is not whitelisted and has more requests thant the threshold
 	if( $requests >= $config{'threshold'} && is_allowed($ip) == 0 ){
-		# check if the ip is already blocked
-		if( $fw_rules !~ m/$ip/ig ){ 
-			push( @ips, $ip );
-		}
+		push( @ips, $ip );
 	}
 }
 
