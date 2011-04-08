@@ -35,7 +35,7 @@ class Config:
 
     self.logging      = self.parser.getboolean( 'DEFAULT', 'logging' ) if self.parser.has_option( 'DEFAULT', 'logging' ) else True
     self.logfile      = self.parser.get( 'DEFAULT', 'logfile' ) if self.parser.has_option( 'DEFAULT', 'logfile' ) else '/var/log/giskard'
-    self.logflushrate = self.parser.getint( 'DEFAULT', 'logflushrate' ) if self.parser.has_option( 'DEFAULT', 'logflushrate' ) else 5
+    self.logflushrate = self.parser.getint( 'DEFAULT', 'logflushrate' ) if self.parser.has_option( 'DEFAULT', 'logflushrate' ) else 0
     self.pidfile      = self.parser.get( 'DEFAULT', 'pidfile' ) if self.parser.has_option( 'DEFAULT', 'pidfile' ) else '/var/run/giskard.pid'
     self.whitelist    = self.parser.get( 'DEFAULT', 'whitelist', ',' ).split(',') if self.parser.has_option( 'DEFAULT', 'whitelist' ) else []
     self.whitelist    = map( lambda s: s.strip(), self.whitelist )
