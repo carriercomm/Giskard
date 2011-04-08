@@ -28,7 +28,7 @@ class Log:
     self.enabled   = Config.getInstance().logging
     self.filename  = Config.getInstance().logfile
     self.flushrate = Config.getInstance().logflushrate
-    self.fd        = open( self.filename, "w+" )
+    self.fd        = open( self.filename, "a+" )
     self.logs      = 0
 
   @classmethod
