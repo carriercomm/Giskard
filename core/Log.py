@@ -39,7 +39,7 @@ class Log:
 
   @classmethod
   def raw( cls, type, message ):
-    log = cls.instance()
+    log = Log.instance()
     if log.enabled:
       log.fd.write( "[%s] [%s] %s\n" % ( datetime.datetime.now().strftime("%d/%b %H:%M:%S"), type, message ) )
 
@@ -50,12 +50,12 @@ class Log:
 
   @classmethod
   def error( cls, message ):
-    cls.instance().raw( 'ERROR', message )
+    Log.instance().raw( 'ERROR', message )
 
   @classmethod
   def warning( cls, message ):
-    cls.instance().raw( 'WARNING', message )
+    Log.instance().raw( 'WARNING', message )
   
   @classmethod
   def info( cls, message ):
-    cls.instance().raw( 'INFO', message )
+    Log.instance().raw( 'INFO', message )
