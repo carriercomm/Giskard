@@ -107,11 +107,11 @@ class NetworkParser:
         # inbound connection not whitelisted triggering a user defined rule
         elif r_address not in self.whitelist and l_port in self.rules:
           connection = {
-            'l_address': l_address,
-            'l_port': l_port,
-            'r_address': r_address,
-            'r_port': r_port,
-            'status': status
+            'l_address' : l_address,
+            'l_port'    : l_port,
+            'r_address' : r_address,
+            'r_port'    : r_port,
+            'status'    : status
           }
           self.connections.append(connection)
 
@@ -127,11 +127,11 @@ class NetworkParser:
         if self.load.has_key(remote):
           # known port, just increment hits
           if self.load[remote].has_key(port):
-            self.load[remote] [port] += 1
+            self.load[remote][port] += 1
           # first hit found on this port
           else:
-            self.load[remote] [port] = 1
+            self.load[remote][port] = 1
         # new address found
         else:
           self.load[remote] = {}
-          self.load[remote] [port] = 1
+          self.load[remote][port] = 1

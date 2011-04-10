@@ -23,12 +23,12 @@ from Giskard import Giskard
 import os
 import sys
 
-if __name__ == "__main__":
-  print "Giskard 2.0 - Copyleft Simone Margaritelli http://www.evilsocket.net <evilsocket@gmail.com>\n";
-
-  if not os.geteuid()==0:
+if __name__ == "__main__":  
+  if not os.geteuid() == 0:
     sys.exit("Only root can run this script\n")
-    
+
+  print "Giskard 2.1 - Copyleft Simone Margaritelli http://www.evilsocket.net <evilsocket@gmail.com>\n";
+  
   giskard = Giskard( stderr = '/dev/stderr' )
 
   if len(sys.argv) == 2:
@@ -38,10 +38,14 @@ if __name__ == "__main__":
       giskard.stop()
     elif 'restart' == sys.argv[1]:
       giskard.restart()
+    elif 'stats' == sys.argv[1]:
+      giskard.stats()
     else:
       print "Unknown command"
       sys.exit(2)
+
     sys.exit(0)
+    
   else:
-    print "usage: %s start|stop|restart" % sys.argv[0]
+    print "usage: %s start|stop|restart|stats" % sys.argv[0]
     sys.exit(2)

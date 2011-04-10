@@ -28,22 +28,23 @@ import time
 import threading
 
 class TriggerUndoScheduler( threading.Thread ):
-  def __init__( self, address, undo, timeout, daemon ):
+  def __init__( self, rulename, address, undo, timeout, daemon ):
     threading.Thread.__init__(self)
-    self.address = address
-    self.undo    = undo
-    self.timeout = timeout
-    self.daemon  = daemon
+    self.rulename = rulename
+    self.address  = address
+    self.undo     = undo
+    self.timeout  = timeout
+    self.daemon   = daemon
 
   def run(self):
     try:
       time.sleep( self.timeout )
-      self.daemon.log( "Undoing trigger for address %s" % NetworkParser.long2address( self.address ) )
+      self.daemon.log( "Undoing '%s' for address %s" % ( self.rulename, NetworkParser.long2address( self.address ) ) )
       os.system( self.undo )
     except Exception as e:
       self.daemon.error( e )
     finally:
-      self.daemon.removeTrigger( self.address )
+      self.daemon.remove_trigger( self.address )
                  
 class Giskard(Daemon):
   def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null' ):
@@ -63,6 +64,28 @@ class Giskard(Daemon):
     Log.info( "Giskard daemon stopped." )
     Daemon.stop( self )
 
+  def stats(self):
+    self.netstat.run()
+
+    self.load        = {}
+    self.whitelist   = map( lambda address: NetworkParser.address2long(address), self.config.whitelist )
+
+    print "Listeners     :\n"
+    for port, address in self.netstat.listeners.iteritems():
+      print "\t%s on port %d" % ( self.netstat.long2address(address), port )
+
+    print "\nServer Load   :\n"
+    for address, hits in self.netstat.load.iteritems():
+      print "\t%s :" % self.netstat.long2address(address)
+      for port, nhits in hits.iteritems():
+        print "\t\t%d hits on port %d" % ( nhits, port )
+
+    print "\nRuleset       :\n"
+    for port, set in self.config.rules.iteritems():
+      print "\tRules for port %d :" % port
+      for rule in set:
+        print "\t\t%s" % rule
+
   def log( self, message ):
     self.log_lock.acquire()
     Log.info( message )
@@ -73,19 +96,19 @@ class Giskard(Daemon):
     Log.error( message )
     self.log_lock.release()
     
-  def removeTrigger( self, address ):
+  def remove_trigger( self, address ):
     self.lock.acquire()
     self.triggers.remove(address)
     self.lock.release()
 
-  def addTrigger( self, address, trigger, undo, timeout ):
+  def add_trigger( self, rulename, address, trigger, undo, timeout ):
     try:
       os.system( trigger )
       self.lock.acquire()
       self.triggers.append(address)
 
       if undo is not None:
-        TriggerUndoScheduler( address, undo, timeout, self ).start()
+        TriggerUndoScheduler( rulename, address, undo, timeout, self ).start()
       
     except Exception as e:
       Log.error( e )
@@ -100,22 +123,23 @@ class Giskard(Daemon):
 
       for address, hits in self.netstat.load.iteritems():
         for port, nhits in hits.iteritems():
-          rule = self.config.rules[ port ]
-          # if exceeded the threshold and still doesn't have an active trigger
-          if nhits > rule.threshold and address not in self.triggers:
-            saddress = self.netstat.long2address(address)
-            trigger  = rule.rule % saddress
-            undo     = rule.undo % saddress if rule.undo is not None else None
+          rule_set = self.config.rules[ port ]
+          for rule in rule_set:
+            # if exceeded the threshold and still doesn't have an active trigger
+            if nhits > rule.threshold and address not in self.triggers:
+              saddress = self.netstat.long2address(address)
+              trigger  = rule.rule % saddress
+              undo     = rule.undo % saddress if rule.undo is not None else None
 
-            Log.warning( "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
-              saddress,
-              rule.threshold,
-              port,
-              nhits,
-              trigger,
-              rule.timeout
-            ))
+              Log.warning( "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
+                saddress,
+                rule.threshold,
+                port,
+                nhits,
+                trigger,
+                rule.timeout
+              ))
 
-            self.addTrigger( address, trigger, undo, rule.timeout )
+              self.add_trigger( rule.name, address, trigger, undo, rule.timeout )
       
       time.sleep( self.config.sleep )

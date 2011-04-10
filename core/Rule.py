@@ -19,7 +19,8 @@
 # or write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 class Rule:
-  def __init__( self, port, threshold, timeout, rule, undo ):
+  def __init__( self, name, port, threshold, timeout, rule, undo ):
+    self.name      = name
     self.port      = port
     self.threshold = threshold
     self.timeout   = timeout
@@ -27,6 +28,6 @@ class Rule:
     self.undo      = undo
 
   def __str__(self):
-    return "Trigger '%s' for %s seconds if connections on port %d are more than %d, then run '%s' to undo." % (
-      self.rule, self.timeout, self.port, self.threshold, self.undo
+    return "[%s] '%s' for %s seconds if connections on port %d are more than %d, then run '%s' to undo." % (
+      self.name, self.rule, self.timeout, self.port, self.threshold, self.undo
     )

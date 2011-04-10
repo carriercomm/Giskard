@@ -41,14 +41,20 @@ class Config:
     self.whitelist    = map( lambda s: s.strip(), self.whitelist )
     self.sleep        = self.parser.getint( 'DEFAULT', 'sleep' ) if self.parser.has_option( 'DEFAULT', 'sleep' ) else 60
 
-    for port in self.parser.sections():      
-      threshold = self.parser.getint( port, 'threshold' )
-      timeout   = self.parser.getint( port, 'timeout' )
-      rule      = self.parser.get( port, 'rule' )
-      undo      = self.parser.get( port, 'undo' ) if self.parser.has_option( port, 'undo' ) else None
-      port      = int(port)
-      
-      self.rules[port] = Rule( port, threshold, timeout, rule, undo )
+    # except for the undo action, every field is mandatory so it's ok to raise
+    # an exception when something is missing
+    for name in self.parser.sections():
+      port      = self.parser.getint( name, 'port' )
+      threshold = self.parser.getint( name, 'threshold' )
+      timeout   = self.parser.getint( name, 'timeout' )
+      rule      = self.parser.get( name, 'rule' )
+      undo      = self.parser.get( name, 'undo' ) if self.parser.has_option( name, 'undo' ) else None
+
+      # new rule set for this port
+      if not self.rules.has_key(port):
+        self.rules[port] = []
+
+      self.rules[port].append( Rule( name, port, threshold, timeout, rule, undo ) )
 
     if len(self.rules) <= 0:
       raise Exception( "No rule specified." )
