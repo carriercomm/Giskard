@@ -167,7 +167,9 @@ class NetworkParser:
       if port in self.listeners:
         remote = connection['r_address']
         # initialize or get load item for this address and increment its hit counter
-        self.load[remote]       = self.load.get( remote, { port : 1 } )
-        self.load[remote][port] = self.load[remote].get( port, 0 ) + 1
+        if self.load.has_key(remote):
+          self.load[remote][port] = self.load[remote].get( port, 0 ) + 1
+        else:
+          self.load[remote] = { port : 1 }
 
 
