@@ -136,7 +136,7 @@ class Giskard(Daemon):
                 rule.threshold,
                 port,
                 nhits,
-                trigger,
+                rule.name,
                 rule.timeout
               ))
 
