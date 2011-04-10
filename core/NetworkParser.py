@@ -117,7 +117,6 @@ class NetworkParser:
         # item is a regexp for the address hostname
         if type(item).__name__ == type(NetworkParser.IP_CLASSIFIER).__name__:
           hostname = self.get_hostname(address)
-          print hostname
           if item.match(hostname):
             return True
 
@@ -157,7 +156,6 @@ class NetworkParser:
             'r_port'    : r_port,
             'status'    : status
           }
-          print connection
           self.connections.append(connection)
 
     fd.close()
