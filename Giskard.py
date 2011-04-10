@@ -66,10 +66,7 @@ class Giskard(Daemon):
 
   def stats(self):
     self.netstat.run()
-
-    self.load        = {}
-    self.whitelist   = map( lambda address: NetworkParser.address2long(address), self.config.whitelist )
-
+    
     print "Listeners     :\n"
     for port, address in self.netstat.listeners.iteritems():
       print "\t%s on port %d" % ( self.netstat.long2address(address), port )

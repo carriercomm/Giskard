@@ -20,6 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 from core.Configuration import Config
 import re
+import socket
 
 class NetworkParser:
   """ The regular expression used to extract data from each /proc/net/tcp line. """
@@ -47,6 +48,9 @@ class NetworkParser:
                                    \s*
                                    (.*)                                         # more                      - 21
                               $""", re.X | re.IGNORECASE)
+  
+  """ Ip address classifier regexp """
+  IP_CLASSIFIER = re.compile( r"\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b" )
                               
   """ Pretty self explainatory. """
   NETSTATS_FILE = '/proc/net/tcp'
@@ -76,8 +80,48 @@ class NetworkParser:
     self.connections = []
     self.listeners   = {}
     self.load        = {}
-    self.whitelist   = map( lambda address: NetworkParser.address2long(address), self.config.whitelist )
     self.rules       = self.config.rules.keys()
+    self.whitelist   = []
+    self.dnscache    = {}
+
+    # pre compute whitelist for addresses and hostnames regexp
+    for item in self.config.whitelist:
+      # item is an ip address, convert it to a little endian unsigned long
+      if NetworkParser.IP_CLASSIFIER.match(item):
+        self.whitelist.append( NetworkParser.address2long(item) )
+      # ip address is a regular expression for an hostname
+      else:
+        self.whitelist.append( re.compile(item) )
+
+  def get_hostname( self, address ):
+    """ Returns the cached hostname for a given address """
+    try:
+      # attempt to get it from the DNS cache
+      hostname = self.dnscache[address]
+    except KeyError:
+      # if not yet cached
+      try:
+        self.dnscache[address] = hostname = socket.gethostbyaddr( NetworkParser.long2address(address) )[0]
+      except socket.herror:
+        self.dnscache[address] = hostname = ""
+        
+    # finally return it
+    return hostname
+
+  def is_whitelisted( self, address ):
+    """ Check if the given ip address is whitelisted """
+    if address in self.whitelist:
+      return True
+    else:
+      for item in self.whitelist:
+        # item is a regexp for the address hostname
+        if type(item).__name__ == type(NetworkParser.IP_CLASSIFIER).__name__:
+          hostname = self.get_hostname(address)
+          print hostname
+          if item.match(hostname):
+            return True
+
+    return False
 
   def run(self):
     """ Performs network stats and load computations. """
@@ -105,7 +149,7 @@ class NetworkParser:
         if status == NetworkParser.LISTENER_STATUS and l_port in self.rules:
           self.listeners[l_port] = l_address
         # inbound connection not whitelisted triggering a user defined rule
-        elif r_address not in self.whitelist and l_port in self.rules:
+        elif l_port in self.rules and not self.is_whitelisted(r_address):
           connection = {
             'l_address' : l_address,
             'l_port'    : l_port,
@@ -113,6 +157,7 @@ class NetworkParser:
             'r_port'    : r_port,
             'status'    : status
           }
+          print connection
           self.connections.append(connection)
 
     fd.close()
