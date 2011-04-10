@@ -88,7 +88,7 @@ class NetworkParser:
 
     fd = open(NetworkParser.NETSTATS_FILE)
 
-    for line in iter(fd):
+    for line in fd:
       line  = line.strip()
       match = NetworkParser.STAT_EXTRACTOR.findall(line)
       # skip non matching lines
@@ -123,15 +123,8 @@ class NetworkParser:
       # inbound connection
       if port in self.listeners:
         remote = connection['r_address']
-        # known address
-        if self.load.has_key(remote):
-          # known port, just increment hits
-          if self.load[remote].has_key(port):
-            self.load[remote][port] += 1
-          # first hit found on this port
-          else:
-            self.load[remote][port] = 1
-        # new address found
-        else:
-          self.load[remote] = {}
-          self.load[remote][port] = 1
+        # initialize or get load item for this address and increment its hit counter
+        self.load[remote]       = self.load.get( remote, { port : 1 } )
+        self.load[remote][port] = self.load[remote].get( port, 0 ) + 1
+
+

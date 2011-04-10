@@ -49,11 +49,8 @@ class Config:
       timeout   = self.parser.getint( name, 'timeout' )
       rule      = self.parser.get( name, 'rule' )
       undo      = self.parser.get( name, 'undo' ) if self.parser.has_option( name, 'undo' ) else None
-
-      # new rule set for this port
-      if not self.rules.has_key(port):
-        self.rules[port] = []
-
+      # initialize or get rule set for this port and append the new rule object
+      self.rules[port] = self.rules.get( port, [] )
       self.rules[port].append( Rule( name, port, threshold, timeout, rule, undo ) )
 
     if len(self.rules) <= 0:
