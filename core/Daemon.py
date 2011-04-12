@@ -26,7 +26,9 @@ import os
 from signal import SIGTERM
 
 # Thanks to Sander Marechal, http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
-class Daemon:
+class Daemon(object):
+  __slots__ = ( 'stdin', 'stdout', 'stderr', 'pidfile' )
+
   """
   A generic daemon class.
 

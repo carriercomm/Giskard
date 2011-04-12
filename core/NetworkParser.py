@@ -22,7 +22,12 @@ from core.Configuration import Config
 import re
 import socket
 
-class NetworkParser:
+class NetworkParser(object):
+  __slots__ = ( 'STAT_EXTRACTOR', 'IP_CLASSIFIER', 'NETSTATS_FILE', 'LISTENER_STATUS',
+                'config', 'connections', 'listeners', 'load', 'rules', 'whitelist',
+                'dnscache'
+              )
+  
   """ The regular expression used to extract data from each /proc/net/tcp line. """
   STAT_EXTRACTOR = re.compile(r"""^\s*
                                    (\d+):\s                                     # sl                        -  0
@@ -71,8 +76,7 @@ class NetworkParser:
   @classmethod
   def address2long(cls, address):
     """ Converts a dotted ip address to a little endian long integer """
-    bytes = address.split('.')
-    bytes = map(lambda b: int(b), bytes)
+    bytes = [ int(b) for b in address.split('.') ]
     return bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
 
   def __init__(self):
@@ -162,10 +166,10 @@ class NetworkParser:
 
     # compute server load
     for connection in self.connections:
-      port = connection['l_port']
+      port   = connection['l_port']
+      remote = connection['r_address']
       # inbound connection
-      if port in self.listeners:
-        remote = connection['r_address']
+      if port in self.listeners:        
         # initialize or get load item for this address and increment its hit counter
         if self.load.has_key(remote):
           self.load[remote][port] = self.load[remote].get( port, 0 ) + 1

@@ -26,8 +26,11 @@ from core.NetworkParser import NetworkParser
 import os 
 import time
 import threading
+import gc
 
-class TriggerUndoScheduler( threading.Thread ):
+class TriggerUndoScheduler( threading.Thread, object ):
+  __slots__ = ( 'rulename', 'address', 'undo', 'timeout', 'daemon' )
+
   def __init__( self, rulename, address, undo, timeout, daemon ):
     threading.Thread.__init__(self)
     self.rulename = rulename
@@ -46,9 +49,14 @@ class TriggerUndoScheduler( threading.Thread ):
     finally:
       self.daemon.remove_trigger( self.address )
                  
-class Giskard(Daemon):
+class Giskard(Daemon,object):
+  __slots__ = ( 'config', 'netstat', 'triggers', 'lock', 'log_lock' )
+
   def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null' ):
     Daemon.__init__( self, Config.getInstance().pidfile, stdin, stdout, stderr )
+
+    # Set the threshold for the first generation to 3
+    gc.set_threshold( 3 )
 
     self.config   = Config.getInstance()
     self.netstat  = NetworkParser()
@@ -92,7 +100,12 @@ class Giskard(Daemon):
     self.log_lock.acquire()
     Log.error( message )
     self.log_lock.release()
-    
+
+  def warning( self, message ):
+    self.log_lock.acquire()
+    Log.warning( message )
+    self.log_lock.release()
+
   def remove_trigger( self, address ):
     self.lock.acquire()
     self.triggers.remove(address)
@@ -128,7 +141,7 @@ class Giskard(Daemon):
               trigger  = rule.rule % saddress
               undo     = rule.undo % saddress if rule.undo is not None else None
 
-              Log.warning( "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
+              self.warning( "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
                 saddress,
                 rule.threshold,
                 port,
@@ -138,5 +151,9 @@ class Giskard(Daemon):
               ))
 
               self.add_trigger( rule.name, address, trigger, undo, rule.timeout )
-      
+      # Force garbage collection before going to sleep :)
+      freed = gc.collect()
+      if freed != 0:
+        self.log( "Freed %d objects during garbage collection." % freed )
+
       time.sleep( self.config.sleep )

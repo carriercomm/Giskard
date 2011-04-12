@@ -21,13 +21,16 @@
 from core.Configuration import Config
 import datetime
 
-class Log:
+class Log(object):
+  __slots__  = ( 'enabled', 'filename', 'flushrate', 'fd', 'logs' )
   __instance = None
   
   def __init__( self ):
-    self.enabled   = Config.getInstance().logging
-    self.filename  = Config.getInstance().logfile
-    self.flushrate = Config.getInstance().logflushrate
+    config = Config.getInstance()
+
+    self.enabled   = config.logging
+    self.filename  = config.logfile
+    self.flushrate = config.logflushrate
     self.fd        = open( self.filename, "a+" )
     self.logs      = 0
 

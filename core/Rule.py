@@ -18,7 +18,9 @@
 # program. If not, go to http://www.gnu.org/licenses/gpl.html
 # or write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-class Rule:
+class Rule(object):
+  __slots__ = ( 'name', 'port', 'threshold', 'timeout', 'rule', 'undo' )
+
   def __init__( self, name, port, threshold, timeout, rule, undo ):
     self.name      = name
     self.port      = port

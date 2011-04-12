@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -OO
 # -*- coding: utf-8 -*-
 # This file is part of Giskard.
 #
@@ -27,7 +27,7 @@ if __name__ == "__main__":
   if not os.geteuid() == 0:
     sys.exit("Only root can run this script\n")
 
-  print "Giskard 2.1 - Copyleft Simone Margaritelli http://www.evilsocket.net <evilsocket@gmail.com>\n";
+  print "Giskard 2.1.2 - Copyleft Simone Margaritelli http://www.evilsocket.net <evilsocket@gmail.com>\n";
   
   giskard = Giskard( stderr = '/dev/stderr' )
 
