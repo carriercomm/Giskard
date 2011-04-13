@@ -24,22 +24,27 @@ import os
 import sys
 
 if __name__ == "__main__":  
-  if not os.geteuid() == 0:
-    sys.exit("Only root can run this script\n")
-
+  
   print "Giskard 2.1.2 - Copyleft Simone Margaritelli http://www.evilsocket.net <evilsocket@gmail.com>\n";
   
-  giskard = Giskard( stderr = '/dev/stderr' )
-
   if len(sys.argv) == 2:
     if 'start' == sys.argv[1]:
-      giskard.start()
+      if not os.geteuid() == 0:
+        sys.exit("Only root can run this script\n")
+      else:
+        Giskard( stderr = '/dev/stderr' ).start()
     elif 'stop' == sys.argv[1]:
-      giskard.stop()
+      if not os.geteuid() == 0:
+        sys.exit("Only root can run this script\n")
+      else:
+        Giskard( stderr = '/dev/stderr' ).stop()
     elif 'restart' == sys.argv[1]:
-      giskard.restart()
+      if not os.geteuid() == 0:
+        sys.exit("Only root can run this script\n")
+      else:
+        Giskard( stderr = '/dev/stderr' ).restart()
     elif 'stats' == sys.argv[1]:
-      giskard.stats()
+      Giskard( stderr = '/dev/stderr', openLog = False ).stats()
     else:
       print "Unknown command"
       sys.exit(2)
