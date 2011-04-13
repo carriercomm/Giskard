@@ -23,7 +23,7 @@ import ConfigParser
 import os
 
 class Config(object):
-  __slots__  = ( 'rules', 'parser', 'logging', 'logfile', 'logflushrate', 'pidfile', 'whitelist', 'sleep' )
+  __slots__  = ( 'rules', 'parser', 'logfile', 'pidfile', 'whitelist', 'sleep' )
   __instance = None;
   __path     = os.path.realpath( os.path.dirname( os.path.realpath(__file__) ) + "/../" )
   __filename = "giskard.ini"
@@ -34,14 +34,12 @@ class Config(object):
 
     self.parser.read( Config.__path + '/' + Config.__filename )
 
-    self.logging      = self.parser.getboolean( 'DEFAULT', 'logging' ) if self.parser.has_option( 'DEFAULT', 'logging' ) else True
-    self.logfile      = self.parser.get( 'DEFAULT', 'logfile' ) if self.parser.has_option( 'DEFAULT', 'logfile' ) else '/var/log/giskard'
-    self.logflushrate = self.parser.getint( 'DEFAULT', 'logflushrate' ) if self.parser.has_option( 'DEFAULT', 'logflushrate' ) else 0
-    self.pidfile      = self.parser.get( 'DEFAULT', 'pidfile' ) if self.parser.has_option( 'DEFAULT', 'pidfile' ) else '/var/run/giskard.pid'
-    self.whitelist    = self.parser.get( 'DEFAULT', 'whitelist', ',' ).split(',') if self.parser.has_option( 'DEFAULT', 'whitelist' ) else []
-    self.whitelist    = [ s.strip() for s in self.whitelist ]
-    self.sleep        = self.parser.getint( 'DEFAULT', 'sleep' ) if self.parser.has_option( 'DEFAULT', 'sleep' ) else 60
-
+    self.logfile    = self.parser.get( 'DEFAULT', 'logfile' ) if self.parser.has_option( 'DEFAULT', 'logfile' ) else '/var/log/giskard'
+    self.pidfile    = self.parser.get( 'DEFAULT', 'pidfile' ) if self.parser.has_option( 'DEFAULT', 'pidfile' ) else '/var/run/giskard.pid'
+    self.whitelist  = self.parser.get( 'DEFAULT', 'whitelist', ',' ).split(',') if self.parser.has_option( 'DEFAULT', 'whitelist' ) else []
+    self.whitelist  = [ s.strip() for s in self.whitelist ]
+    self.sleep      = self.parser.getint( 'DEFAULT', 'sleep' ) if self.parser.has_option( 'DEFAULT', 'sleep' ) else 60
+    
     # except for the undo action, every field is mandatory so it's ok to raise
     # an exception when something is missing
     for name in self.parser.sections():

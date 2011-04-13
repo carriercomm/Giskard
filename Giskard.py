@@ -20,9 +20,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 from core.Configuration import Config
 from core.Daemon        import Daemon
-from core.Log           import Log
 from core.NetworkParser import NetworkParser
 
+import logging
 import os 
 import time
 import threading
@@ -42,15 +42,15 @@ class TriggerUndoScheduler( threading.Thread, object ):
   def run(self):
     try:
       time.sleep( self.timeout )
-      self.daemon.log( "Undoing '%s' for address %s" % ( self.rulename, NetworkParser.long2address( self.address ) ) )
+      logging.info( "Undoing '%s' for address %s" % ( self.rulename, NetworkParser.long2address( self.address ) ) )
       os.system( self.undo )
     except Exception as e:
-      self.daemon.error( e )
+      logging.error( e )
     finally:
       self.daemon.remove_trigger( self.address )
                  
 class Giskard(Daemon,object):
-  __slots__ = ( 'config', 'netstat', 'triggers', 'lock', 'log_lock' )
+  __slots__ = ( 'config', 'netstat', 'triggers', 'lock' )
 
   def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null' ):
     Daemon.__init__( self, Config.getInstance().pidfile, stdin, stdout, stderr )
@@ -62,14 +62,19 @@ class Giskard(Daemon,object):
     self.netstat  = NetworkParser()
     self.triggers = []
     self.lock     = threading.Lock()
-    self.log_lock = threading.Lock()
+    # Initialize logging
+    logging.basicConfig( level    = logging.INFO,
+                         format   = '[%(asctime)s] [%(levelname)s] %(message)s',
+                         filename = self.config.logfile,
+                         filemode = 'a' )
+
 
   def start(self):
-    Log.info( "Giskard daemon started." )
+    logging.info( "Giskard daemon started." )
     Daemon.start( self )
 
   def stop(self):
-    Log.info( "Giskard daemon stopped." )
+    logging.info( "Giskard daemon stopped." )
     Daemon.stop( self )
 
   def stats(self):
@@ -91,21 +96,6 @@ class Giskard(Daemon,object):
       for rule in set:
         print "\t\t%s" % rule
 
-  def log( self, message ):
-    self.log_lock.acquire()
-    Log.info( message )
-    self.log_lock.release()
-
-  def error( self, message ):
-    self.log_lock.acquire()
-    Log.error( message )
-    self.log_lock.release()
-
-  def warning( self, message ):
-    self.log_lock.acquire()
-    Log.warning( message )
-    self.log_lock.release()
-
   def remove_trigger( self, address ):
     self.lock.acquire()
     self.triggers.remove(address)
@@ -121,14 +111,15 @@ class Giskard(Daemon,object):
         TriggerUndoScheduler( rulename, address, undo, timeout, self ).start()
       
     except Exception as e:
-      Log.error( e )
+      logging.error( e )
     finally:
       self.lock.release()
   
   def run(self):
-    Log.info( "Giskard is now running ." )
+    logging.info( "Giskard is now running ." )
     
     while True:
+      logging.debug( "Running new check ..." )
       self.netstat.run()
 
       for address, hits in self.netstat.load.iteritems():
@@ -141,7 +132,7 @@ class Giskard(Daemon,object):
               trigger  = rule.rule % saddress
               undo     = rule.undo % saddress if rule.undo is not None else None
 
-              self.warning( "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
+              logging.warning( "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
                 saddress,
                 rule.threshold,
                 port,
@@ -154,6 +145,6 @@ class Giskard(Daemon,object):
       # Force garbage collection before going to sleep :)
       freed = gc.collect()
       if freed != 0:
-        self.log( "Freed %d objects during garbage collection." % freed )
+        logging.debug( "Freed %d objects during garbage collection." % freed )
 
       time.sleep( self.config.sleep )
