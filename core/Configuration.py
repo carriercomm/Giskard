@@ -34,11 +34,14 @@ class Config(object):
 
     self.parser.read( Config.__path + '/' + Config.__filename )
 
-    self.logfile    = self.parser.get( 'DEFAULT', 'logfile' ) if self.parser.has_option( 'DEFAULT', 'logfile' ) else '/var/log/giskard'
-    self.pidfile    = self.parser.get( 'DEFAULT', 'pidfile' ) if self.parser.has_option( 'DEFAULT', 'pidfile' ) else '/var/run/giskard.pid'
-    self.whitelist  = self.parser.get( 'DEFAULT', 'whitelist', ',' ).split(',') if self.parser.has_option( 'DEFAULT', 'whitelist' ) else []
-    self.whitelist  = [ s.strip() for s in self.whitelist ]
-    self.sleep      = self.parser.getint( 'DEFAULT', 'sleep' ) if self.parser.has_option( 'DEFAULT', 'sleep' ) else 60
+    self.logfile      = self.get( 'DEFAULT', 'logfile', '/var/log/giskard' )
+    self.pidfile      = self.get( 'DEFAULT', 'pidfile', '/var/log/giskard.pid' ) 
+    self.whitelist    = [ s.strip() for s in self.get( 'DEFAULT', 'whitelist', ',' ).split(',') ]
+    self.email_alerts = self.getboolean( 'DEFAULT', 'email_alerts', False )
+    self.email_to     = self.get( 'DEFAULT', 'email_to',   'root@localhost' )
+    self.email_from   = self.get( 'DEFAULT', 'email_from', 'root@localhost' )
+    self.email_subj   = self.get( 'DEFAULT', 'email_subj', 'Giskard Alarm' ) 
+    self.sleep        = self.getint( 'DEFAULT', 'sleep', 60 ) 
     
     # except for the undo action, every field is mandatory so it's ok to raise
     # an exception when something is missing
@@ -47,13 +50,22 @@ class Config(object):
       threshold = self.parser.getint( name, 'threshold' )
       timeout   = self.parser.getint( name, 'timeout' )
       rule      = self.parser.get( name, 'rule' )
-      undo      = self.parser.get( name, 'undo' ) if self.parser.has_option( name, 'undo' ) else None
+      undo      = self.get( name, 'undo', None ) 
       # initialize or get rule set for this port and append the new rule object
       self.rules[port] = self.rules.get( port, [] )
       self.rules[port].append( Rule( name, port, threshold, timeout, rule, undo ) )
 
     if len(self.rules) <= 0:
       raise Exception( "No rule specified." )
+  
+  def getint( self, section, option, default ):
+    return self.parser.getint( section, option ) if self.parser.has_option( section, option ) else default
+
+  def getboolean( self, section, option, default ):
+    return self.parser.getboolean( section, option ) if self.parser.has_option( section, option ) else default
+
+  def get( self, section, option, default ):
+    return self.parser.get( section, option ) if self.parser.has_option( section, option ) else default
 
   @classmethod
   def getInstance(cls):

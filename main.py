@@ -25,7 +25,7 @@ import sys
 
 if __name__ == "__main__":  
   
-  print "Giskard 2.1.2 - Copyleft Simone Margaritelli http://www.evilsocket.net <evilsocket@gmail.com>\n";
+  print "Giskard 2.1.3 - Copyleft Simone Margaritelli http://www.evilsocket.net <evilsocket@gmail.com>\n";
   
   if len(sys.argv) == 2:
     if 'start' == sys.argv[1]:

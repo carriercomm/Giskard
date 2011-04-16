@@ -21,12 +21,14 @@
 from core.Configuration import Config
 from core.Daemon        import Daemon
 from core.NetworkParser import NetworkParser
+from email.mime.text    import MIMEText
 
 import logging
 import os 
 import time
 import threading
 import gc
+import smtplib
 
 class TriggerUndoScheduler( threading.Thread, object ):
   __slots__ = ( 'rulename', 'address', 'undo', 'timeout', 'daemon' )
@@ -50,7 +52,7 @@ class TriggerUndoScheduler( threading.Thread, object ):
       self.daemon.remove_trigger( self.address )
                  
 class Giskard(Daemon,object):
-  __slots__ = ( 'config', 'netstat', 'triggers', 'lock' )
+  __slots__ = ( 'config', 'netstat', 'triggers', 'lock', 'smtp' )
 
   def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null', openLog = True ):
     Daemon.__init__( self, Config.getInstance().pidfile, stdin, stdout, stderr )
@@ -62,6 +64,12 @@ class Giskard(Daemon,object):
     self.netstat  = NetworkParser()
     self.triggers = []
     self.lock     = threading.Lock()
+    
+    if self.config.email_alerts is True:
+      self.smtp = smtplib.SMTP('localhost') 
+    else:
+      self.smtp = None
+
     # Initialize logging
     if openLog is True:
       logging.basicConfig( level    = logging.INFO,
@@ -133,16 +141,28 @@ class Giskard(Daemon,object):
               trigger  = rule.rule % saddress
               undo     = rule.undo % saddress if rule.undo is not None else None
 
-              logging.warning( "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
-                saddress,
-                rule.threshold,
-                port,
-                nhits,
-                rule.name,
-                rule.timeout
-              ))
-
               self.add_trigger( rule.name, address, trigger, undo, rule.timeout )
+              
+              alarm = "Address %s has exceeded the threshold of %d concurrent requests on port %d with %d hits, triggering rule '%s' for %d seconds." % (
+                        saddress,
+                        rule.threshold,
+                        port,
+                        nhits,
+                        rule.name,
+                        rule.timeout
+                      )
+
+              logging.warning( alarm ) 
+
+              if self.config.email_alerts is True:
+                email = MIMEText( alarm )
+                
+                email['From']    = self.config.email_from
+                email['To']      = self.config.email_to
+                email['Subject'] = self.config.email_subj
+
+                self.smtp.sendmail( self.config.email_from, [self.config.email_to], email.as_string() )  
+              
       # Force garbage collection before going to sleep :)
       freed = gc.collect()
       if freed != 0:
