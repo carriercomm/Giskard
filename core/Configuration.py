@@ -23,7 +23,7 @@ import ConfigParser
 import os
 
 class Config(object):
-  __slots__  = ( 'rules', 'parser', 'logfile', 'pidfile', 'whitelist', 'sleep' )
+  __slots__  = ( 'rules', 'parser', 'logfile', 'pidfile', 'whitelist', 'sleep', 'email_alerts', 'email_to', 'email_from', 'email_subj' )
   __instance = None;
   __path     = os.path.realpath( os.path.dirname( os.path.realpath(__file__) ) + "/../" )
   __filename = "giskard.ini"
