@@ -52,9 +52,9 @@ class TriggerUndoScheduler( threading.Thread, object ):
       self.daemon.remove_trigger( self.address )
                  
 class Giskard(Daemon,object):
-  __slots__ = ( 'config', 'netstat', 'triggers', 'lock', 'smtp' )
+  __slots__ = ( 'config', 'netstat', 'triggers', 'lock' )
 
-  def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null', openLog = True, smtpConnect = True ):
+  def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null', openLog = True ):
     Daemon.__init__( self, Config.getInstance().pidfile, stdin, stdout, stderr )
 
     # Set the threshold for the first generation to 3
@@ -65,11 +65,6 @@ class Giskard(Daemon,object):
     self.triggers = []
     self.lock     = threading.Lock()
     
-    if self.config.email_alerts is True and smtpConnect is True:
-      self.smtp = smtplib.SMTP('localhost') 
-    else:
-      self.smtp = None
-
     # Initialize logging
     if openLog is True:
       logging.basicConfig( level    = logging.INFO,
@@ -155,14 +150,16 @@ class Giskard(Daemon,object):
               logging.warning( alarm ) 
 
               if self.config.email_alerts is True:
+                smtp  = smtplib.SMTP('localhost') 
                 email = MIMEText( alarm )
                 
                 email['From']    = self.config.email_from
                 email['To']      = self.config.email_to
                 email['Subject'] = self.config.email_subj
 
-                self.smtp.sendmail( self.config.email_from, [self.config.email_to], email.as_string() )  
-              
+                smtp.sendmail( self.config.email_from, [self.config.email_to], email.as_string() )  
+                smtp.quit()
+                
       # Force garbage collection before going to sleep :)
       freed = gc.collect()
       if freed != 0:

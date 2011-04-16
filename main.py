@@ -44,7 +44,7 @@ if __name__ == "__main__":
       else:
         Giskard( stderr = '/dev/stderr' ).restart()
     elif 'stats' == sys.argv[1]:
-      Giskard( stderr = '/dev/stderr', openLog = False, smtpConnect = False ).stats()
+      Giskard( stderr = '/dev/stderr', openLog = False ).stats()
     else:
       print "Unknown command"
       sys.exit(2)
