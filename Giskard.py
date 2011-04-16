@@ -54,7 +54,7 @@ class TriggerUndoScheduler( threading.Thread, object ):
 class Giskard(Daemon,object):
   __slots__ = ( 'config', 'netstat', 'triggers', 'lock', 'smtp' )
 
-  def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null', openLog = True ):
+  def __init__( self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null', openLog = True, smtpConnect = True ):
     Daemon.__init__( self, Config.getInstance().pidfile, stdin, stdout, stderr )
 
     # Set the threshold for the first generation to 3
@@ -65,7 +65,7 @@ class Giskard(Daemon,object):
     self.triggers = []
     self.lock     = threading.Lock()
     
-    if self.config.email_alerts is True:
+    if self.config.email_alerts is True and smtpConnect is True:
       self.smtp = smtplib.SMTP('localhost') 
     else:
       self.smtp = None
